@@ -20,7 +20,7 @@ module.exports.tenant=async(req,res)=>{
 
         const newTenant= await Tenant.create({
             companyName:companyName,
-            contactEmail:companyEmail,
+            contactEmail:contactEmail,
         })
 
         const newAdmin=await User.create({
@@ -28,8 +28,10 @@ module.exports.tenant=async(req,res)=>{
             password:hashedPass,
             role:"tenantAdmin",
             email:contactEmail,
-            tenantId:newTenant._id
+            tenantId:newTenant._id,
+            isApproved: true
         })
+        
 
         res.status(201).json({message:`Tenant ${newTenant.companyName} and ${newAdmin.name} is created`});
 
@@ -61,7 +63,17 @@ module.exports.registerUser=async(req,res)=>{
             tenantId:req.user.tenantId,
         })
 
-        res.status(201).json({message:"User registered succesfully",user:newUser});
+        res.status(201).json({
+            message:"User registered successfully",
+            user:{
+                id:newUser._id,
+                name:newUser.name,
+                email:newUser.email,
+                role:newUser.role,
+                tenantId:newUser.tenantId,
+                isApproved:newUser.isApproved
+            }
+        });
     }catch(err){
         res.status(500).json({error:err.message})
     }
@@ -78,11 +90,11 @@ module.exports.loginUser=async(req,res)=>{
         }
         const isMatched=await bcrypt.compare(password,currUser.password)
         if (!isMatched){
-            return res.status(500).json({message:"Invalid User"});
+            return res.status(401).json({message:"Invalid User"});
         }
 
         if(!currUser.isApproved){
-            return res.status(403).json({message:"Yout account is pending admin approval."})
+            return res.status(403).json({message:"Your account is pending admin approval."})
         }
         
         //payload define krna parega
@@ -121,11 +133,12 @@ module.exports.approveUser=async(req,res)=>{
     const {userId}=req.params
     let userToApprove=await User.findOne({_id:userId,tenantId:req.user.tenantId})
     if(!userToApprove){
-        res.status(401).json({message:"User not found"})
+        return res.status(401).json({message:"User not found"})
     }
 
     userToApprove.isApproved=true
-    res.status(200).json({message:`User was approved`})
+        await userToApprove.save()
+        res.status(200).json({message:"User was approved"})
 
     await userToApprove.save()
 }
