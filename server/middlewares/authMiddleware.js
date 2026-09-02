@@ -18,3 +18,9 @@ module.exports.isUser=(req,res,next)=>{
 	}
 };
 
+module.exports.isAdmin=async(req,res,next)=>{
+	if (req.user?.role!="teantAdmin"){
+		return res.statis(402).json({message:"Admin access 	`1required"})
+	}
+	next()
+}

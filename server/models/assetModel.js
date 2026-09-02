@@ -3,11 +3,12 @@ const Schema=mongoose.Schema;
 
 
 const assetSchema=new Schema({
-    tenandId:{
-        type:String.Types.ObjectId,
+    tenantId:{
+        type:Schema.Types.ObjectId,
         ref:"Tenant",
         trim:true,
-        index:true
+        index:true,
+        required:true
     },
     name:{
         type:String,
@@ -24,8 +25,8 @@ const assetSchema=new Schema({
         enum:["operational","decommissioned","maintenance"],
         default:"operational"
     },assignedTo:{
-        type:String,
-        ref:User,
+        type:Schema.Types.ObjectId,
+        ref:"User",
         default:null
     }
 },{

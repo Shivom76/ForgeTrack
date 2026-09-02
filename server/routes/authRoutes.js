@@ -6,6 +6,9 @@ const {isAdmin}=require("../middlewares/roleMiddleware");
 
 
 router.route("/tenant")
+    .get((req,res)=>{
+        res.send("This is tenant registration page")
+    })
     .post(authController.tenant);
 
 router.route("/login")
