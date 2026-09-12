@@ -4,6 +4,7 @@ const express=require("express");
 const app=express();
 const cors=require("cors");
 const authRoutes=require("./routes/authRoutes.js");
+const assetRoutes=require("./routes/assetRoutes.js");
 
 // Database connection
 const mongoose=require("mongoose")
@@ -27,9 +28,10 @@ app.get('/',(req,res)=>{
 res.send("<h2>This is home page</h2>")
 });
 
-app.use("/api/auth/",authRoutes);
+app.use("/api/auth",authRoutes);
+app.use("/api/asset",assetRoutes);
 
 
 app.listen(portVal,()=>{
-console.log(`${portVal} is listening`)
+    console.log(`${portVal} is listening`)
 });

@@ -18,9 +18,16 @@ module.exports.isUser=(req,res,next)=>{
 	}
 };
 
-module.exports.isAdmin=async(req,res,next)=>{
-	if (req.user?.role!="teantAdmin"){
-		return res.statis(402).json({message:"Admin access 	`1required"})
+module.exports.isAdmin=(req,res,next)=>{
+	if(req.user?.role!=="tenantAdmin"){
+		return res.status(403).json({message:"Tenant admin access required"});
 	}
-	next()
+
+	next();
+}
+
+module.exports.restrictTo=(...allowedRoles)=>{
+	if(!allowedRoles.includes(req.user?.role)){
+		return res.status(403).json({message:`You do not have the required access`})
+	}
 }
