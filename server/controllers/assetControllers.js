@@ -36,3 +36,23 @@ const addAsset=async(req,res)=>{
         return res.status(500).json({error:err.message})
     }
 }
+
+// add removeAsset and patch controllers
+const removeAsset=async(req,res)=>{
+    try{
+        const {serialNumber}=req.params
+
+        let result=await Asset.deleteOne({
+            serialNumber:serialNumber,
+            tenantId:req.user.tenantId
+        })
+        if (result.deletedCount === 0) {
+            return res.status(404).json({
+                message: "Asset not found in your organization."
+            });
+        }
+        return res.status(200).json({message:`The asset with serial Number ${serialNumber} has been removed`})
+    }catch(err){
+        return res.status(500).json({errror:err.message});
+}
+}
