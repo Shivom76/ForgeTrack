@@ -1,8 +1,8 @@
 const express=require("express");
 const router=express.Router();
 const authController=require("../controllers/authControllers")
-const {isUser}=require("../middlewares/authMiddleware");
-const {isAdmin}=require("../middlewares/roleMiddleware");
+const {isUser, isAdmin}=require("../middlewares/authMiddleware");
+// const {isAdmin}=require("../middlewares/roleMiddleware");
 
 
 router.route("/tenant")

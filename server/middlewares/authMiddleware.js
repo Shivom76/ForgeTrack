@@ -26,8 +26,10 @@ module.exports.isAdmin=(req,res,next)=>{
 	next();
 }
 
-module.exports.restrictTo=(...allowedRoles)=>{
+module.exports.restrictTo=(...allowedRoles)=>(req,res,next)=>{
 	if(!allowedRoles.includes(req.user?.role)){
-		return res.status(403).json({message:`You do not have the required access`})
+		return res.status(403).json({message:"You do not have the required access"});
 	}
-}
+
+	next();
+};
