@@ -1,7 +1,7 @@
 const crypto=require("crypto");
 const Asset=require("../models/assetModel");
 
-const addAsset=async(req,res)=>{
+module.exports.addAsset=async(req,res)=>{
     try{
         let {eqpName,serialNum, status}=req.body
         const tenantId=req.user.tenantId
@@ -37,8 +37,7 @@ const addAsset=async(req,res)=>{
     }
 }
 
-// add removeAsset and patch controllers
-const removeAsset=async(req,res)=>{
+module.exports.removeAsset=async(req,res)=>{
     try{
         const {serialNumber}=req.params
 
@@ -56,3 +55,6 @@ const removeAsset=async(req,res)=>{
         return res.status(500).json({errror:err.message});
 }
 }
+
+
+// add removeAsset and patch controllers
