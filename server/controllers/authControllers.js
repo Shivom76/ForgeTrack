@@ -1,144 +1,116 @@
-const jwt=require("jsonwebtoken");
-const bcrypt=require("bcrypt");
-const User=require("../models/userModel")
-const Tenant=require("../models/tenantModel")
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
+const User = require("../models/userModel");
+const Tenant = require("../models/tenantModel");
+const { ROLES } = require("../constants");
+const { asyncHandler, httpError, requireFields } = require("../utils/http");
+const {
+  assertValidEmail,
+  assertValidPassword,
+  hashPassword,
+  slugify,
+} = require("../utils/validators");
 
-// kaam baaki hai 
-// to make tenant schema and put tenant id for the registered users
-// check gemini for reference
+// Compared against when the user doesn't exist, so response time doesn't
+// reveal whether an email/company is registered.
+const DUMMY_HASH = bcrypt.hashSync("not-a-real-password", 10);
 
-module.exports.tenant=async(req,res)=>{
-    try{
-        const {companyName,contactEmail,adminName,adminPassword}=req.body;
-        const present=await Tenant.findOne({companyName:companyName})
-        if (present){
-            return res.status(400).json({message:`Tenant ${companyName} is aready registered`})
-        }
+const signToken = (user) =>
+  jwt.sign(
+    { userId: user._id, tenantId: user.tenantId },
+    process.env.JWT_SECRET,
+    { algorithm: "HS256", expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
+  );
 
-        const saltRounds=parseInt(process.env.SALT_NUM) || 12
-        const hashedPass=await bcrypt.hash(adminPassword,saltRounds);
+const tenantDto = (tenant) => ({
+  id: tenant._id,
+  companyName: tenant.companyName,
+  companyCode: tenant.slug,
+});
 
-        const newTenant= await Tenant.create({
-            companyName:companyName,
-            contactEmail:contactEmail,
-        })
+// POST /api/auth/register-tenant
+module.exports.registerTenant = asyncHandler(async (req, res) => {
+  requireFields(req.body, ["companyName", "contactEmail", "adminName", "adminPassword"]);
+  const { companyName, contactEmail, adminName, adminPassword } = req.body;
+  assertValidEmail(contactEmail);
+  assertValidPassword(adminPassword);
 
-        const newAdmin=await User.create({
-            name:adminName,
-            password:hashedPass,
-            role:"tenantAdmin",
-            email:contactEmail,
-            tenantId:newTenant._id,
-            isApproved: true
-        })
-        
+  const slug = slugify(companyName);
+  if (!slug) throw httpError(400, "Company name must contain letters or numbers");
 
-        res.status(201).json({message:`Tenant ${newTenant.companyName} and ${newAdmin.name} is created`});
+  const exists = await Tenant.exists({
+    $or: [{ companyName: companyName.trim() }, { slug }],
+  });
+  if (exists) throw httpError(409, "A company with this name is already registered");
 
-    }catch(err){
-        res.status(500).json({error:err.message})
-    }
-}
+  const passwordHash = await hashPassword(adminPassword);
+  const tenant = await Tenant.create({ companyName, slug, contactEmail });
 
+  let admin;
+  try {
+    admin = await User.create({
+      tenantId: tenant._id,
+      name: adminName,
+      email: contactEmail,
+      password: passwordHash,
+      role: ROLES.ADMIN,
+      isApproved: true,
+    });
+  } catch (err) {
+    // No orphan tenants if the admin user fails validation.
+    await Tenant.deleteOne({ _id: tenant._id });
+    throw err;
+  }
 
-module.exports.registerUser=async(req,res)=>{
-    try{
-        let {role}=req.params;
-        let {name,password,email}=req.body;
+  // Return a token so the frontend can go straight to the dashboard after sign-up.
+  res.status(201).json({
+    message: `${tenant.companyName} registered`,
+    token: signToken(admin),
+    user: admin,
+    tenant: tenantDto(tenant),
+  });
+});
 
-        const validRoles = ["tenantAdmin", "operationManager", "fieldTechnician"];
-        if (!validRoles.includes(role)) {
-            return res.status(400).json({ 
-                message: `Invalid role '${role}'. Must be one of: ${validRoles.join(", ")}` 
-            });
-        }
+// POST /api/auth/login   { companyCode, email, password }
+module.exports.login = asyncHandler(async (req, res) => {
+  requireFields(req.body, ["companyCode", "email", "password"]);
+  const { companyCode, email, password } = req.body;
 
-        const saltRounds=parseInt(process.env.SALT_NUM)||12
-        const hashedPassword=await bcrypt.hash(password,saltRounds);
-        const newUser=await User.create({
-            name:name,
-            password:hashedPassword,
-            email:email,
-            role:role,
-            tenantId:req.user.tenantId,
-        })
+  const tenant = await Tenant.findOne({ slug: companyCode.trim().toLowerCase() });
+  const user = tenant
+    ? await User.findOne({
+        tenantId: tenant._id,
+        email: email.trim().toLowerCase(),
+      }).select("+password")
+    : null;
 
-        res.status(201).json({
-            message:"User registered successfully",
-            user:{
-                id:newUser._id,
-                name:newUser.name,
-                email:newUser.email,
-                role:newUser.role,
-                tenantId:newUser.tenantId,
-                isApproved:newUser.isApproved
-            }
-        });
-    }catch(err){
-        res.status(500).json({error:err.message})
-    }
-}
+  const matches = await bcrypt.compare(password, user ? user.password : DUMMY_HASH);
 
+  // One generic message: don't reveal which part was wrong.
+  if (!user || !matches) {
+    throw httpError(401, "Invalid company code, email or password");
+  }
+  if (!user.isActive) {
+    throw httpError(403, "Your account has been deactivated. Contact your admin.");
+  }
+  if (!user.isApproved) {
+    throw httpError(403, "Your account is pending admin approval.");
+  }
 
-// login user here
-module.exports.loginUser=async(req,res)=>{
-    try{
-        let {email,password}=req.body;
-        let currUser=await User.findOne({email:email}).select("+password");
-        if(!currUser){
-            return res.status(400).json({message:"User not found"})
-        }
-        const isMatched=await bcrypt.compare(password,currUser.password)
-        if (!isMatched){
-            return res.status(401).json({message:"Invalid User"});
-        }
+  res.json({
+    message: "Login successful",
+    token: signToken(user),
+    user, // password stripped by the schema's toJSON
+    tenant: tenantDto(tenant),
+  });
+});
 
-        if(!currUser.isApproved){
-            return res.status(403).json({message:"Your account is pending admin approval."})
-        }
-        
-        //payload define krna parega
-        const payload={
-            tenantId:currUser.tenantId,
-            userId:currUser._id,
-            role:currUser.role
-        }
-
-        // generate token
-        const token=jwt.sign(
-            payload,
-            process.env.JWT_SECRET,
-            {expiresIn:process.env.JWT_EXPIRES_IN||"7d"}
-        )
-
-        const data={
-            message:"Login Successful",
-            token:token,
-            user:{
-                id:currUser._id,
-                name:currUser.name,
-                role:currUser.role,
-                email:currUser.email
-            }
-        }
-
-        res.status(200).json(data)
-
-    }catch(err){
-        res.status(500).json({error:err.message})
-    }
-}
-
-module.exports.approveUser=async(req,res)=>{
-    const {userId}=req.params
-    let userToApprove=await User.findOne({_id:userId,tenantId:req.user.tenantId})
-    if(!userToApprove){
-        return res.status(401).json({message:"User not found"})
-    }
-
-    userToApprove.isApproved=true
-        await userToApprove.save()
-        res.status(200).json({message:"User was approved"})
-
-    await userToApprove.save()
-}
+// GET /api/auth/me   -> frontend calls this on every page load to restore the session
+module.exports.me = asyncHandler(async (req, res) => {
+  const [user, tenant] = await Promise.all([
+    User.findOne({ _id: req.user.userId, tenantId: req.user.tenantId }),
+    Tenant.findById(req.user.tenantId),
+  ]);
+  if (!user || !tenant) throw httpError(401, "Account not found");
+  res.json({ user, tenant: tenantDto(tenant) });
+});

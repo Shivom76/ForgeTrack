@@ -1,26 +1,10 @@
-const express=require("express");
-const router=express.Router();
-const authController=require("../controllers/authControllers")
-const {isUser, isAdmin}=require("../middlewares/authMiddleware");
-// const {isAdmin}=require("../middlewares/roleMiddleware");
+const express = require("express");
+const router = express.Router();
+const auth = require("../controllers/authControllers");
+const { authenticate } = require("../middlewares/authMiddleware");
 
+router.post("/register-tenant", auth.registerTenant);
+router.post("/login", auth.login);
+router.get("/me", authenticate, auth.me);
 
-router.route("/tenant")
-    .get((req,res)=>{
-        res.send("This is tenant registration page")
-    })
-    .post(authController.tenant);
-
-router.route("/login")
-    .get((req,res)=>{
-        res.json({message:`Login Page`})
-    })
-    .post(authController.loginUser);
-
-router.route(`/register/:role`)
-    .post(isUser,isAdmin,authController.registerUser);
-
-router.route("/approve/:userId")
-    .patch(isUser,isAdmin,authController.approveUser);
-    
-module.exports=router;
+module.exports = router;
