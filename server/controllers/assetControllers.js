@@ -11,13 +11,13 @@ module.exports.addAsset=async(req,res)=>{
             let serialNum=`AST-${tagNum}`
         }
 
-        let existingAsset=Asset.findOne({
+        let existingAsset=await Asset.findOne({
             tenantId:tenantId,
-            serailNumber:serialNum
+            serialNumber:serialNum
         })
 
         if(existingAsset){
-            return `Asset is alreay present`
+            return res.status(401).json({message:`Asset is alreay present`})
         }
 
         const newAsset=await Asset.create({
