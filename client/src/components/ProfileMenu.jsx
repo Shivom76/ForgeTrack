@@ -10,7 +10,8 @@ import {ROLES} from "../lib/roles.js";
 //   { label: "Manage users", to: "/users", icon: Users, roles: [ROLES.ADMIN] }
 const MENU_ITEMS = [
   { label: "My profile", to: "/profile", icon: User },
-  {label:"Manage users", to: "/users", icon: User, roles: [ROLES.ADMIN]}];
+  // {label:"Manage users", to: "/users", icon: User, roles: [ROLES.ADMIN]}
+  ];
 
 const itemClass =
   "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none";
