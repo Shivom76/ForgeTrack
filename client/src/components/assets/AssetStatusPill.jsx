@@ -3,7 +3,7 @@ import { statusLabel } from "../../lib/assets";
 const STYLES = {
   operational: { pill: "bg-emerald-50 text-emerald-700", dot: "bg-emerald-500" },
   maintenance: { pill: "bg-amber-50 text-amber-700", dot: "bg-amber-500" },
-  decommissioned: { pill: "bg-slate-100 text-slate-600", dot: "bg-slate-400" },
+  decommissioned: { pill: "bg-red-200 text-slate-600", dot: "bg-red-500" },
 };
 
 export default function AssetStatusPill({ status }) {

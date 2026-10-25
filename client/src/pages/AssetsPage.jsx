@@ -316,7 +316,7 @@ export default function AssetsPage() {
           </div>
         ) : (
           <div className={`overflow-x-auto transition-opacity ${loading ? "opacity-60" : ""}`}>
-            <table className="w-full min-w-[44rem] text-left text-sm">
+            <table className="w-full min-w-176 text-left text-sm">
               <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-4 py-3 font-medium">Asset</th>
