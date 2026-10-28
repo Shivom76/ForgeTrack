@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertCircle, CheckCircle2, Eye, EyeOff, Plus, Search, Users } from "lucide-react";
+import { AlertCircle, CheckCircle2, Eye, EyeOff, Plus, Search, Users,Trash } from "lucide-react";
 import { api } from "../lib/api";
 import { ROLES } from "../lib/roles";
 import { useAuth } from "../context/AuthContext";
@@ -334,6 +334,7 @@ export default function UserPage() {
                   <th className="px-4 py-3 font-medium">Role</th>
                   <th className="px-4 py-3 font-medium">Status</th>
                   <th className="hidden px-4 py-3 font-medium sm:table-cell">Added</th>
+                  <th className="px-4 py-3 font-medium">Remove User</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -360,6 +361,7 @@ export default function UserPage() {
                       <StatusPill active={u.isActive} />
                     </td>
                     <td className="hidden px-4 py-3 text-slate-500 sm:table-cell">{formatDate(u.createdAt)}</td>
+                    <td className="px-4 py-3 font-bold"><Trash /></td>
                   </tr>
                 ))}
               </tbody>
