@@ -11,5 +11,6 @@ router.use(authenticate);
 router.get("/", restrictTo(ROLES.ADMIN, ROLES.MANAGER), users.listUsers);
 router.post("/", restrictTo(ROLES.ADMIN), users.createUser);
 router.patch("/:id", restrictTo(ROLES.ADMIN), users.updateUser);
+router.delete("/delete/:id",restrictTo(ROLES.ADMIN),users.deleteUser);
 
 module.exports = router;

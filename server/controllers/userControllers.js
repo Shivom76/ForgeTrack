@@ -1,4 +1,5 @@
 const User = require("../models/userModel");
+const Asset=require("../models/assetModel");
 const { ROLES, ROLE_LIST } = require("../constants");
 const {
   asyncHandler,
@@ -93,3 +94,33 @@ module.exports.updateUser = asyncHandler(async (req, res) => {
 
   res.json({ message: "User updated", user });
 });
+
+
+
+module.exports.deleteUser=async(req,res, next)=>{
+  try{
+    if(req.params.id===req.user.userId){
+      return res.status(400).json({message:`You can't delete your own account`});
+    }
+
+    const deletedUser=await User.findOneAndDelete({
+      _id:req.params.id,
+      tenantId:req.user.tenantId
+    })
+
+    if(!deletedUser){
+      return  res.status(404).json({message:`User not found`});
+    }
+
+    await Asset.updateMany(
+      {tenantId:req.user.tenantId, assignedTo:deletedUser._id},
+      {$set:{assignedTo:null}}
+    )
+
+    console.log(`${deletedUser} is deleted`)
+    
+    return res.status(200).json({message:`User ${deletedUser.name} has been removed`})
+  }catch(err){
+    next(err);
+  }
+}
