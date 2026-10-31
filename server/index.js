@@ -22,7 +22,15 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(express.json({ limit: "100kb" }));
-app.use(cors({ origin: process.env.FRONT_URL || "http://localhost:5173" }));
+<<<<<<< Updated upstream
+app.use(cors({ origin: process.env.FRONT_URL || "http://localhost:5173" || "http://192.168.1.7" }));
+=======
+// app.use(cors({ origin: process.env.FRONT_URL || "http://localhost:5173" }));
+const allowedOrigins = (process.env.FRONT_URL || "http://localhost:5173")
+    .split(",")
+    .map((s) => s.trim());
+  app.use(cors({ origin: allowedOrigins }));
+>>>>>>> Stashed changes
 
 app.get('/',(req,res)=>{
   res.send("Home page backend")

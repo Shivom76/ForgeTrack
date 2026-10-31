@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertCircle, CheckCircle2, Eye, EyeOff, Plus, Search, Users } from "lucide-react";
+import { AlertCircle, CheckCircle2, Eye, EyeOff, Plus, Search, Users,Trash2 } from "lucide-react";
 import { api } from "../lib/api";
 import { ROLES } from "../lib/roles";
 import { useAuth } from "../context/AuthContext";
@@ -7,6 +7,7 @@ import Avatar from "../components/Avatar";
 import RoleBadge from "../components/RoleBadge";
 import Field from "../components/Field";
 import Button from "../components/Button";
+import ModalShell from "../components/ModalShell";
 
 const emptyForm = { name: "", email: "", password: "", role: ROLES.TECHNICIAN };
 
@@ -73,6 +74,8 @@ function AddUserModal({ onClose, onCreated }) {
       setSubmitting(false);
     }
   };
+
+
 
   return (
     <div onClick={onClose} className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
@@ -176,6 +179,8 @@ export default function UserPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [deletingUser, setDeletingUser] = useState(false);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
 
@@ -208,6 +213,21 @@ export default function UserPage() {
     setIsModalOpen(false);
     setNotice(`${newUser.name} was added to your team.`);
     loadUsers();
+  };
+
+  const removeUser = async (id) => {
+    setError("");
+    setDeletingUser(true);
+    try {
+      const res = await api(`/users/delete/${id}`, { method: "DELETE" });
+      setNotice(res.message);
+      setUserToDelete(null);
+      await loadUsers();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setDeletingUser(false);
+    }
   };
 
   const counts = useMemo(() => {
@@ -334,6 +354,7 @@ export default function UserPage() {
                   <th className="px-4 py-3 font-medium">Role</th>
                   <th className="px-4 py-3 font-medium">Status</th>
                   <th className="hidden px-4 py-3 font-medium sm:table-cell">Added</th>
+                  <th className="px-4 py-3 font-medium">Remove User</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -360,6 +381,18 @@ export default function UserPage() {
                       <StatusPill active={u.isActive} />
                     </td>
                     <td className="hidden px-4 py-3 text-slate-500 sm:table-cell">{formatDate(u.createdAt)}</td>
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={() => setUserToDelete(u)}
+                        aria-label={`Remove ${u.name}`}
+                        disabled={u.id === me.id}
+                        title={u.id === me.id ? "You cannot remove your own account" : `Remove ${u.name}`}
+                        className="rounded-lg p-1 text-slate-500 transition hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -369,6 +402,33 @@ export default function UserPage() {
       </div>
 
       {isModalOpen && <AddUserModal onClose={closeModal} onCreated={handleCreated} />}
+      {userToDelete && (
+        <ModalShell onClose={() => setUserToDelete(null)} title="Delete this user?">
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600">
+              Do you want to delete <span className="font-semibold text-slate-900">{userToDelete.name}</span>? This action cannot be undone.
+            </p>
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setUserToDelete(null)}
+                disabled={deletingUser}
+                className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => removeUser(userToDelete.id)}
+                disabled={deletingUser}
+                className="w-full rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {deletingUser ? "Deleting…" : "Delete user"}
+              </button>
+            </div>
+          </div>
+        </ModalShell>
+      )}
     </div>
   );
 }
